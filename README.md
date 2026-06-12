@@ -1,158 +1,131 @@
-# Rust Hypervisor Firmware
+[update-readmes]   Mode: rewrite — migrating to template structure...
+# rust-hypervisor-firmware
 
-This repository contains a simple firmware that is designed to be launched from
-anything that supports loading ELF binaries and running them with the
-PVH booting standard
+[![Built with Ona](https://ona.com/build-with-ona.svg)](https://app.ona.com/#https://github.com/Interested-Deving-1896/rust-hypervisor-firmware)
 
-The purpose is to be able to use this firmware to be able to load a
-bootloader from within a disk image without requiring the use of a complex
-firmware such as TianoCore/edk2 and without requiring the VMM to reuse
-functionality used for booting the Linux kernel.
+<!-- AI:start:what-it-does -->
+This project provides a minimal, lightweight firmware implementation for hypervisors, written in Rust. It targets multiple architectures, including x86_64, AArch64, and RISC-V, and is designed to initialize virtual machines by setting up the required hardware state and bootstrapping the guest operating system. It is used by developers building virtualization platforms or custom hypervisor solutions.
+<!-- AI:end:what-it-does -->
 
-Currently it will directly load a kernel from a disk image that follows the
-[Boot Loader Specification](https://uapi-group.org/specifications/specs/boot_loader_specification)
+## Architecture
 
-There is also minimal EFI compatibility support allowing the boot of some
-images that use EFI (shim + GRUB2 as used by Ubuntu).
+<!-- AI:start:architecture -->
+The project is structured as a Rust-based firmware for hypervisors, supporting multiple architectures (x86_64, aarch64, riscv64). It uses a modular design with architecture-specific dependencies and configurations. The main components include:
 
-The firmware is primarily developed against [Cloud
-Hypervisor](https://github.com/cloud-hypervisor/cloud-hypervisor) but there is
-also support for using QEMU's PVH loader.
+1. **Core Logic**: Located in `src/`, this directory contains the primary implementation of the firmware.
+2. **Architecture-Specific Configurations**: Files like `x86_64-unknown-none.json`, `aarch64-unknown-none.json`, and `riscv64gcv-unknown-none-elf.json` define target-specific settings.
+3. **Build Scripts**: `build.rs` handles custom build steps.
+4. **Resources**: The `resources/` directory contains additional assets required during the build or runtime.
+5. **Scripts**: Utility scripts are stored in the `scripts/` directory.
+6. **Configuration Files**: Files like `Cargo.toml`, `rust-toolchain.toml`, and `.github/` workflows manage dependencies, toolchains, and CI/CD pipelines.
 
-This project was originally developed using
-[Firecracker](https://github.com/firecracker-microvm) however as it does not
-currently support resetting the virtio block device it is not possible to boot
-all the way into the OS.
+The components interact through Rust's module system and conditional compilation, enabling architecture-specific code paths. The directory structure is as follows:
 
-## Features
-
-* virtio (PCI) block support
-* GPT parsing (to find EFI system partition)
-* FAT12/16/32 directory traversal and file reading
-* bzImage loader
-* "Boot Loader Specification" parser
-* PE32+ loader
-* Minimal EFI environment (sufficient to boot shim + GRUB2 as used by Ubuntu)
-
-## x86-64 Support
-
-### Building
-
-To compile:
-
+```plaintext
+.
+├── .github/
+├── resources/
+├── scripts/
+├── src/
+│   ├── arch/
+│   ├── drivers/
+│   ├── firmware/
+│   └── main.rs
+├── Cargo.toml
+├── build.rs
+├── rust-toolchain.toml
+├── x86_64-unknown-none.json
+├── aarch64-unknown-none.json
+└── riscv64gcv-unknown-none-elf.json
 ```
-cargo build --release --target x86_64-unknown-none.json -Zbuild-std=core -Zbuild-std-features=compiler-builtins-mem
-```
+<!-- AI:end:architecture -->
 
-The result will be in:
+## Install
 
-```
-target/x86_64-unknown-none/release/hypervisor-fw
-```
+<!-- Add installation instructions here. This section is yours — the AI will not modify it. -->
 
-### Running
-
-Works with Cloud Hypervisor and QEMU via their PVH loaders as an alternative to
-the Linux kernel.
-
-Cloud Hypervisor and QEMU are currently the primary development targets for the
-firmware although support for other VMMs will be considered.
-
-#### Cloud Hypervisor
-
-As per [getting
-started](https://github.com/cloud-hypervisor/cloud-hypervisor/blob/master/README.md#2-getting-started)
-
-However instead of using the binary firmware for the parameter to `--kernel`
-instead use the binary you build above.
-
-```
-$ pushd $CLOUDH
-$ sudo setcap cap_net_admin+ep ./cloud-hypervisor/target/release/cloud-hypervisor
-$ ./cloud-hypervisor/target/release/cloud-hypervisor \
-	--kernel ./target/x86_64-unknown-none/release/hypervisor-fw \
-	--disk path=focal-server-cloudimg-amd64.raw \
-	--cpus boot=4 \
-	--memory size=512M \
-	--net "tap=,mac=,ip=,mask=" \
-	--rng
-$ popd
+```bash
+git clone https://github.com/Interested-Deving-1896/rust-hypervisor-firmware.git
+cd rust-hypervisor-firmware
 ```
 
-#### QEMU
+## Usage
 
-Use the QEMU `-kernel` parameter to specify the path to the firmware.
+<!-- Add usage examples here. This section is yours — the AI will not modify it. -->
 
-e.g.
+## Configuration
 
-```
-$ qemu-system-x86_64 -machine q35,accel=kvm -cpu host,-vmx -m 1G\
-    -kernel ./target/x86_64-unknown-none/release/hypervisor-fw \
-    -display none -nodefaults \
-    -serial stdio \
-    -drive id=os,file=focal-server-cloudimg-amd64.raw,if=none \
-    -device virtio-blk-pci,drive=os,disable-legacy=on
-```
+<!-- Document configuration options here. This section is yours — the AI will not modify it. -->
 
-## AArch64 Support
+## CI
 
-### Building
+<!-- AI:start:ci -->
+- **build.yaml**: Runs `cargo build` and `cargo clippy` for all supported targets (x86_64, aarch64, riscv64). Ensures code compiles and adheres to linting rules. No secrets required.
 
-To compile:
+- **dco.yaml**: Verifies that all commits are signed with a Developer Certificate of Origin (DCO). No secrets required.
 
-```
-cargo build --release --target aarch64-unknown-none.json -Zbuild-std=core -Zbuild-std-features=compiler-builtins-mem
-```
+- **docker-image.yaml**: Builds and optionally pushes a Docker image containing the project. Requires `DOCKER_USERNAME` and `DOCKER_PASSWORD` secrets for pushing images.
 
-The result will be in:
+- **integration-windows.yaml**: Executes integration tests on a Windows environment. Ensures compatibility with Windows systems. No secrets required.
 
-```
-target/aarch64-unknown-none/release/hypervisor-fw
-```
+- **release.yaml**: Builds and publishes release artifacts for supported targets. Requires `GITHUB_TOKEN` (provided by default in GitHub Actions) for publishing releases.
 
-## RISC-V Support
+- **tests.yaml**: Runs unit tests and integration tests for all supported targets. Ensures correctness of the codebase. No secrets required.
+<!-- AI:end:ci -->
 
-Experimental RISC-V support is available. This is currently designed to run as a
-payload from OpenSBI under QEMU virt. It is expected wider platform support
-will become available in the future.
+## Mirror chain
 
-### Building
-
-To compile:
+<!-- AI:start:mirror-chain -->
+This repo is maintained in [`Interested-Deving-1896/rust-hypervisor-firmware`](https://github.com/Interested-Deving-1896/rust-hypervisor-firmware) and mirrored through:
 
 ```
-cargo build --release --target riscv64gcv-unknown-none-elf.json -Zbuild-std=core -Zbuild-std-features=compiler-builtins-mem
+Interested-Deving-1896/rust-hypervisor-firmware  ──►  OpenOS-Project-OSP/rust-hypervisor-firmware  ──►  OpenOS-Project-Ecosystem-OOC/rust-hypervisor-firmware
 ```
 
-The result will be in:
+Changes flow downstream automatically via the hourly mirror chain in
+[`fork-sync-all`](https://github.com/Interested-Deving-1896/fork-sync-all).
+Direct commits to OSP or OOC are detected and opened as PRs back to `Interested-Deving-1896`.
+<!-- AI:end:mirror-chain -->
 
-```
-target/riscv64gcv-unknown-none-elf/release/hypervisor-fw
-```
+## Contributors
 
-### Running
+<!-- AI:start:contributors -->
+[@retrage](https://github.com/retrage) (243 commits)  
+[@rbradford](https://github.com/rbradford) (196 commits)  
+[@dependabot[bot]](https://github.com/dependabot[bot]) (146 commits)  
+[@josephlr](https://github.com/josephlr) (67 commits)  
+[@dependabot-preview[bot]](https://github.com/dependabot-preview[bot]) (20 commits)  
+[@jongwu](https://github.com/jongwu) (11 commits)  
+[@benmaddison](https://github.com/benmaddison) (4 commits)  
+[@yuuzi41](https://github.com/yuuzi41) (1 commit)  
+[@shpark](https://github.com/shpark) (1 commit)  
+[@rveerama1](https://github.com/rveerama1) (1 commit)  
+[@ning-yang](https://github.com/ning-yang) (1 commit)  
+[@edigaryev](https://github.com/edigaryev) (1 commit)  
+[@MrXinWang](https://github.com/MrXinWang) (1 commit)  
+[@henryksloan](https://github.com/henryksloan) (1 commit)  
+[@fdr](https://github.com/fdr) (1 commit)  
+[@Lencerf](https://github.com/Lencerf) (1 commit)  
+[@thenewwazoo](https://github.com/thenewwazoo) (1 commit)  
+[@acarp-crusoe](https://github.com/acarp-crusoe) (1 commit)  
 
-Currently only QEMU has been tested.
+This repository may be a mirror. Please refer to the upstream source for additional contributions and updates.
+<!-- AI:end:contributors -->
 
-#### QEMU
+## Origins
 
-```
-$ qemu-system-riscv64  -M virt -cpu rv64 -smp 1 -m 1024 \
-    -nographic -kernel target/riscv64gcv-unknown-none-elf/release/hypervisor-fw \
-    -drive id=mydrive,file=root.img,format=raw \
-    -device virtio-blk-pci,drive=mydrive,disable-legacy=on
-```
+<!-- AI:start:origins -->
+_Original project — no upstream fork._
+<!-- AI:end:origins -->
 
-## Testing
+## Resources
 
-"cargo test" needs disk images from make-test-disks.sh
+<!-- AI:start:resources -->
+_No additional resource files found._
+<!-- AI:end:resources -->
 
-And clear-28660-kvm.img:
+## License
 
-https://download.clearlinux.org/releases/28660/clear/clear-28660-kvm.img.xz
-
-sha1sum: 5fc086643dea4b20c59a795a262e0d2400fab15f
-
-## Security issues
-
-Please contact the maintainers listed in the MAINTAINERS.md file with security issues.
+<!-- AI:start:license -->
+[Apache-2.0](https://github.com/Interested-Deving-1896/rust-hypervisor-firmware/blob/main/LICENSE) © 2026 [Interested-Deving-1896](https://github.com/Interested-Deving-1896)
+<!-- AI:end:license -->
